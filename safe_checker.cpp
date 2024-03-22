@@ -146,6 +146,21 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
   bool direction_is_positive = start_direction_positive;
   bool direction_is_horizontal = start_direction_horizontal;
   Point current_position = start_point;
+
+  // Check the initial position
+  const auto first_row_iter = row_wise_mirrors_.find(current_position.row);
+  if (first_row_iter != row_wise_mirrors_.end()) {
+    const auto& mirrors_line = first_row_iter->second;
+    const auto first_col_iter = mirrors_line.find(current_position.col);
+    if (first_col_iter != mirrors_line.end()) {
+      const MirrorOrientation mirror = first_col_iter->second;
+      direction_is_horizontal = !direction_is_horizontal;
+      if (mirror == MirrorOrientation::LeftToUp) {
+        direction_is_positive = !direction_is_positive;
+      }
+    }
+  }
+
   bool should_continue = true;
   while(should_continue) {
     if (direction_is_horizontal) {
@@ -178,10 +193,8 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
           // Change direction
           direction_is_horizontal = false;
           const MirrorOrientation mirror = closest_mirror_iter->second;
-          if (direction_is_positive) {
-            direction_is_positive = (mirror == MirrorOrientation::LeftToDown);
-          } else {
-            direction_is_positive = (mirror == MirrorOrientation::LeftToUp);
+          if (mirror == MirrorOrientation::LeftToUp) {
+            direction_is_positive = !direction_is_positive;
           }
         }
       }
@@ -221,10 +234,8 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
           // Change direction
           direction_is_horizontal = true;
           const MirrorOrientation mirror = closest_mirror_iter->second;
-          if (direction_is_positive) {
-            direction_is_positive = (mirror == MirrorOrientation::LeftToDown);
-          } else {
-            direction_is_positive = (mirror == MirrorOrientation::LeftToUp);
+          if (mirror == MirrorOrientation::LeftToUp) {
+            direction_is_positive = !direction_is_positive;
           }
         }
       }
