@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 
 project(safe_laser LANGUAGES CXX)
 
+option(BUILD_TESTS "Build unit tests" OFF)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -12,8 +14,13 @@ add_library(${LIBRARY_NAME} OBJECT
   safe_checker.cpp
 )
 
+target_include_directories(${LIBRARY_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
 set(EXECUTABLE_NAME safe_laser)
 
 add_executable(${EXECUTABLE_NAME} main.cpp)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${LIBRARY_NAME})
 
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

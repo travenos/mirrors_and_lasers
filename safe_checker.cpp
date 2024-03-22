@@ -51,8 +51,8 @@ SafeCheckResult SafeChecker::check_safe() const
   RaySegments forward_row_wise_segments;
   RaySegments forward_col_wise_segments;
   trace_the_ray_(forward_start_position,
-                 forward_direction_is_horizontal,
                  forward_direction_is_positive,
+                 forward_direction_is_horizontal,
                  forward_end_point,
                  forward_end_direction_horizontal,
                  forward_row_wise_segments,
@@ -75,8 +75,8 @@ SafeCheckResult SafeChecker::check_safe() const
   RaySegments backward_row_wise_segments;
   RaySegments backward_col_wise_segments;
   trace_the_ray_(backward_start_position,
-                 backward_direction_is_horizontal,
                  backward_direction_is_positive,
+                 backward_direction_is_horizontal,
                  backward_end_point,
                  backward_end_direction_horizontal,
                  backward_row_wise_segments,
@@ -166,6 +166,8 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
         } else {
           if (closest_mirror_iter != mirrors_line.begin()) {
             --closest_mirror_iter;
+          } else {
+            closest_mirror_iter = mirrors_line.end();
           }
         }
         if (closest_mirror_iter == mirrors_line.end()) {
@@ -207,6 +209,8 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
         } else {
           if (closest_mirror_iter != mirrors_line.begin()) {
             --closest_mirror_iter;
+          } else {
+            closest_mirror_iter = mirrors_line.end();
           }
         }
         if (closest_mirror_iter == mirrors_line.end()) {
@@ -227,7 +231,7 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
       // Add a segment
       const auto min_max_rows_pair = std::minmax(current_position.row, next_position.row);
       RaySegment segment{current_position.col, min_max_rows_pair.first, min_max_rows_pair.second};
-      row_wise_segments.push_back(segment);
+      col_wise_segments.push_back(segment);
       // Go to the next position
       current_position = next_position;
     }
@@ -247,24 +251,26 @@ std::vector<Point> SafeChecker::find_intersections_(const RaySegments& forward_r
 
   for (const auto& segment : backward_row_wise_segments) {
     const std::uint32_t row = segment.first_coordinate;
-    const auto col_iter = forward_col_wise_segments_map.lower_bound(segment.second_coordinate_start);
+    auto col_iter = forward_col_wise_segments_map.lower_bound(segment.second_coordinate_start);
     while (col_iter != forward_col_wise_segments_map.end() && col_iter->first <= segment.second_coordinate_end) {
       const std::uint32_t col = col_iter->first;
       if (col_iter->second.has_intersection(row)) {
         Point intersection{row, col};
         intersections.push_back(intersection);
       }
+      ++col_iter;
     }
   }
   for (const auto& segment : backward_col_wise_segments) {
     const std::uint32_t col = segment.first_coordinate;
-    const auto row_iter = forward_row_wise_segments_map.lower_bound(segment.second_coordinate_start);
+    auto row_iter = forward_row_wise_segments_map.lower_bound(segment.second_coordinate_start);
     while (row_iter != forward_row_wise_segments_map.end() && row_iter->first <= segment.second_coordinate_end) {
       const std::uint32_t row = row_iter->first;
       if (row_iter->second.has_intersection(col)) {
         Point intersection{row, col};
         intersections.push_back(intersection);
       }
+      ++row_iter;
     }
   }
   return intersections;
