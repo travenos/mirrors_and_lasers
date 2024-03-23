@@ -43,42 +43,37 @@ SafeCheckResult SafeChecker::check_safe() const
   SafeCheckResult result{};
 
   // Find ray segments of forward direction
-  Point forward_start_position{1U, 1U};
-  bool forward_direction_is_horizontal = true;
-  bool forward_direction_is_positive = true;  // Left to right or up to down
-  Point forward_end_point;
-  bool forward_end_direction_horizontal = false;
+  RayState forward_start_state;
+  forward_start_state.position = Point{1U, 1U};
+  forward_start_state.is_positive = true;
+  forward_start_state.is_horizontal = true;
+  RayState forward_end_state;
   RaySegments forward_row_wise_segments;
   RaySegments forward_col_wise_segments;
-  trace_the_ray_(forward_start_position,
-                 forward_direction_is_positive,
-                 forward_direction_is_horizontal,
-                 forward_end_point,
-                 forward_end_direction_horizontal,
+  trace_the_ray_(forward_start_state,
+                 forward_end_state,
                  forward_row_wise_segments,
                  forward_col_wise_segments);
 
   // Check if the safe can be opened without any mirror insertion
-  if (forward_end_direction_horizontal &&
-      forward_end_point.row == rows_ &&
-      forward_end_point.col == cols_) {
+  if (forward_end_state.position.row == rows_ &&
+      forward_end_state.position.col == cols_ &&
+      forward_end_state.is_positive &&
+      forward_end_state.is_horizontal) {
     result.result_type = SafeCheckResultType::OpensWithoutInserting;
     return result;
   }
 
   // Find ray segments of backward direction
-  Point backward_start_position{rows_, cols_};
-  bool backward_direction_is_horizontal = true;
-  bool backward_direction_is_positive = false;  // Left to right or up to down
-  Point backward_end_point;
-  bool backward_end_direction_horizontal = false;
+  RayState backward_start_state;
+  backward_start_state.position = Point{rows_, cols_};
+  backward_start_state.is_positive = false;
+  backward_start_state.is_horizontal = true;
+  RayState backward_end_state;
   RaySegments backward_row_wise_segments;
   RaySegments backward_col_wise_segments;
-  trace_the_ray_(backward_start_position,
-                 backward_direction_is_positive,
-                 backward_direction_is_horizontal,
-                 backward_end_point,
-                 backward_end_direction_horizontal,
+  trace_the_ray_(backward_start_state,
+                 backward_end_state,
                  backward_row_wise_segments,
                  backward_col_wise_segments);
 
@@ -132,50 +127,45 @@ SafeCheckResult SafeChecker::check_safe() const
 }
 
 
-void SafeChecker::trace_the_ray_(const Point& start_point,
-                                 bool start_direction_positive,
-                                 bool start_direction_horizontal,
-                                 Point& end_point,
-                                 bool& end_direction_horizontal,
+void SafeChecker::trace_the_ray_(const RayState& start_state,
+                                 RayState& end_state,
                                  RaySegments& row_wise_segments,
                                  RaySegments& col_wise_segments) const
 {
   row_wise_segments.clear();
   col_wise_segments.clear();
 
-  bool direction_is_positive = start_direction_positive;
-  bool direction_is_horizontal = start_direction_horizontal;
-  Point current_position = start_point;
+  RayState current_state = start_state;
 
   // Check the initial position
-  const auto first_row_iter = row_wise_mirrors_.find(current_position.row);
+  const auto first_row_iter = row_wise_mirrors_.find(current_state.position.row);
   if (first_row_iter != row_wise_mirrors_.end()) {
     const auto& mirrors_line = first_row_iter->second;
-    const auto first_col_iter = mirrors_line.find(current_position.col);
+    const auto first_col_iter = mirrors_line.find(current_state.position.col);
     if (first_col_iter != mirrors_line.end()) {
       const MirrorOrientation mirror = first_col_iter->second;
-      direction_is_horizontal = !direction_is_horizontal;
+      current_state.is_horizontal = !current_state.is_horizontal;
       if (mirror == MirrorOrientation::LeftToUp) {
-        direction_is_positive = !direction_is_positive;
+        current_state.is_positive = !current_state.is_positive;
       }
     }
   }
 
   bool should_continue = true;
   while(should_continue) {
-    if (direction_is_horizontal) {
+    if (current_state.is_horizontal) {
       Point next_position;
-      next_position.row = current_position.row;
-      const auto row_iter = row_wise_mirrors_.find(current_position.row);
+      next_position.row = current_state.position.row;
+      const auto row_iter = row_wise_mirrors_.find(current_state.position.row);
       if (row_iter == row_wise_mirrors_.end()) {
-        next_position.col = direction_is_positive ? cols_ : 1U;
+        next_position.col = current_state.is_positive ? cols_ : 1U;
         should_continue = false;
       } else {
         const auto& mirrors_line = row_iter->second;
-        auto closest_mirror_iter = mirrors_line.lower_bound(current_position.col);
-        if (direction_is_positive) {
+        auto closest_mirror_iter = mirrors_line.lower_bound(current_state.position.col);
+        if (current_state.is_positive) {
           if (closest_mirror_iter != mirrors_line.end() &&
-              closest_mirror_iter->first == current_position.col) {
+              closest_mirror_iter->first == current_state.position.col) {
             ++closest_mirror_iter;
           }
         } else {
@@ -186,37 +176,37 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
           }
         }
         if (closest_mirror_iter == mirrors_line.end()) {
-          next_position.col = direction_is_positive ? cols_ : 1U;
+          next_position.col = current_state.is_positive ? cols_ : 1U;
           should_continue = false;
         } else {
           next_position.col = closest_mirror_iter->first;
           // Change direction
-          direction_is_horizontal = false;
+          current_state.is_horizontal = false;
           const MirrorOrientation mirror = closest_mirror_iter->second;
           if (mirror == MirrorOrientation::LeftToUp) {
-            direction_is_positive = !direction_is_positive;
+            current_state.is_positive = !current_state.is_positive;
           }
         }
       }
       // Add a segment
-      const auto min_max_cols_pair = std::minmax(current_position.col, next_position.col);
-      RaySegment segment{current_position.row, min_max_cols_pair.first, min_max_cols_pair.second};
+      const auto min_max_cols_pair = std::minmax(current_state.position.col, next_position.col);
+      RaySegment segment{current_state.position.row, min_max_cols_pair.first, min_max_cols_pair.second};
       row_wise_segments.push_back(segment);
       // Go to the next position
-      current_position = next_position;
+      current_state.position = next_position;
     } else {
       Point next_position;
-      next_position.col = current_position.col;
-      const auto col_iter = col_wise_mirrors_.find(current_position.col);
+      next_position.col = current_state.position.col;
+      const auto col_iter = col_wise_mirrors_.find(current_state.position.col);
       if (col_iter == col_wise_mirrors_.end()) {
-        next_position.row = direction_is_positive ? rows_ : 1U;
+        next_position.row = current_state.is_positive ? rows_ : 1U;
         should_continue = false;
       } else {
         const auto& mirrors_line = col_iter->second;
-        auto closest_mirror_iter = mirrors_line.lower_bound(current_position.row);
-        if (direction_is_positive) {
+        auto closest_mirror_iter = mirrors_line.lower_bound(current_state.position.row);
+        if (current_state.is_positive) {
           if (closest_mirror_iter != mirrors_line.end() &&
-              closest_mirror_iter->first == current_position.row) {
+              closest_mirror_iter->first == current_state.position.row) {
             ++closest_mirror_iter;
           }
         } else {
@@ -227,28 +217,27 @@ void SafeChecker::trace_the_ray_(const Point& start_point,
           }
         }
         if (closest_mirror_iter == mirrors_line.end()) {
-          next_position.row = direction_is_positive ? rows_ : 1U;
+          next_position.row = current_state.is_positive ? rows_ : 1U;
           should_continue = false;
         } else {
           next_position.row = closest_mirror_iter->first;
           // Change direction
-          direction_is_horizontal = true;
+          current_state.is_horizontal = true;
           const MirrorOrientation mirror = closest_mirror_iter->second;
           if (mirror == MirrorOrientation::LeftToUp) {
-            direction_is_positive = !direction_is_positive;
+            current_state.is_positive = !current_state.is_positive;
           }
         }
       }
       // Add a segment
-      const auto min_max_rows_pair = std::minmax(current_position.row, next_position.row);
-      RaySegment segment{current_position.col, min_max_rows_pair.first, min_max_rows_pair.second};
+      const auto min_max_rows_pair = std::minmax(current_state.position.row, next_position.row);
+      RaySegment segment{current_state.position.col, min_max_rows_pair.first, min_max_rows_pair.second};
       col_wise_segments.push_back(segment);
       // Go to the next position
-      current_position = next_position;
+      current_state.position = next_position;
     }
   }
-  end_point = current_position;
-  end_direction_horizontal = direction_is_horizontal;
+  end_state = current_state;
 }
 
 std::vector<Point> SafeChecker::find_intersections_(const RaySegments& forward_row_wise_segments,

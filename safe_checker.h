@@ -30,6 +30,12 @@ struct Point final {
   std::uint32_t col{0U};
 };
 
+struct RayState final {
+  Point position{0U, 0U};
+  bool is_positive{false};  // Left to right or up to down
+  bool is_horizontal{false};
+};
+
 enum class SafeCheckResultType : std::int8_t {
   OpensWithoutInserting,
   CanNotBeOpened,
@@ -52,11 +58,8 @@ public:
   SafeCheckResult check_safe() const;
 
 private:
-  void trace_the_ray_(const Point& start_point,
-                      bool start_direction_positive,
-                      bool start_direction_horizontal,
-                      Point& end_point,
-                      bool& end_direction_horizontal,
+  void trace_the_ray_(const RayState& start_state,
+                      RayState& end_state,
                       RaySegments& row_wise_segments,
                       RaySegments& col_wise_segments) const;
 
