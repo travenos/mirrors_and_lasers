@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 TEST(SafeCheckerTest, TwoPossibleSolutions)
@@ -456,4 +457,67 @@ TEST(SafeCheckerTest, MultipleHorizontalIntersections)
   EXPECT_EQ(check_result.positions, 3U);
   EXPECT_EQ(check_result.mirror_row, 3U);
   EXPECT_EQ(check_result.mirror_col, 2U);
+}
+
+TEST(SafeCheckerTest, ZeroSpace)
+{
+  const std::vector<mirrors_lasers::Point> left_to_up_mirrors{};
+  const std::vector<mirrors_lasers::Point> left_to_down_mirrors{};
+
+  EXPECT_THROW((mirrors_lasers::SafeChecker{0U, 1U, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+
+  EXPECT_THROW((mirrors_lasers::SafeChecker{1U, 0U, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+
+  EXPECT_THROW((mirrors_lasers::SafeChecker{0U, 0U, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+}
+
+TEST(SafeCheckerTest, IncorrectMirrorsPositions)
+{
+  constexpr std::uint32_t R{6U};
+  constexpr std::uint32_t C{5U};
+  std::vector<mirrors_lasers::Point> left_to_up_mirrors{};
+  std::vector<mirrors_lasers::Point> left_to_down_mirrors{};
+
+  left_to_up_mirrors.push_back(mirrors_lasers::Point{0U, 1U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_up_mirrors.clear();
+
+  left_to_down_mirrors.push_back(mirrors_lasers::Point{0U, 1U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_down_mirrors.clear();
+
+  left_to_up_mirrors.push_back(mirrors_lasers::Point{7U, 1U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_up_mirrors.clear();
+
+  left_to_down_mirrors.push_back(mirrors_lasers::Point{7U, 1U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_down_mirrors.clear();
+
+  left_to_up_mirrors.push_back(mirrors_lasers::Point{1U, 0U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_up_mirrors.clear();
+
+  left_to_down_mirrors.push_back(mirrors_lasers::Point{1U, 0U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_down_mirrors.clear();
+
+  left_to_up_mirrors.push_back(mirrors_lasers::Point{1U, 6U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_up_mirrors.clear();
+
+  left_to_down_mirrors.push_back(mirrors_lasers::Point{1U, 6U});
+  EXPECT_THROW((mirrors_lasers::SafeChecker{R, C, left_to_up_mirrors, left_to_down_mirrors}),
+               std::invalid_argument);
+  left_to_down_mirrors.clear();
 }

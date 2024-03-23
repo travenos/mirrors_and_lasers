@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <string>
 #include <limits>
 
 namespace mirrors_lasers {
@@ -25,16 +26,25 @@ SafeChecker::SafeChecker(std::uint32_t rows, std::uint32_t columns,
   : rows_{rows}
   , cols_{columns}
 {
+  if (rows_ < START_POSITION) {
+    throw std::invalid_argument{"Incorrect rows count: " + std::to_string(rows_)};
+  }
+  if (cols_ < START_POSITION) {
+    throw std::invalid_argument{"Incorrect columns count: " + std::to_string(rows_)};
+  }
+
   const std::size_t mirrors_count = left_to_up_mirrors.size() + left_to_down_mirrors.size();
   row_wise_mirrors_.reserve(mirrors_count);
   col_wise_mirrors_.reserve(mirrors_count);
 
   // Fill the data
   for (const auto& left_to_up_mirror : left_to_up_mirrors) {
+    check_position_(left_to_up_mirror);
     row_wise_mirrors_[left_to_up_mirror.row][left_to_up_mirror.col] = MirrorOrientation::LeftToUp;
     col_wise_mirrors_[left_to_up_mirror.col][left_to_up_mirror.row] = MirrorOrientation::LeftToUp;
   }
   for (const auto& left_to_down_mirror : left_to_down_mirrors) {
+    check_position_(left_to_down_mirror);
     row_wise_mirrors_[left_to_down_mirror.row][left_to_down_mirror.col] = MirrorOrientation::LeftToDown;
     col_wise_mirrors_[left_to_down_mirror.col][left_to_down_mirror.row] = MirrorOrientation::LeftToDown;
   }
@@ -126,6 +136,16 @@ SafeCheckResult SafeChecker::check_safe() const
   result.mirror_col = min_element_iter->col;
 
   return result;
+}
+
+void SafeChecker::check_position_(const Point& point) const
+{
+  if (point.row < START_POSITION || point.row > rows_) {
+    throw std::invalid_argument{"Incorrect row value: " + std::to_string(point.row)};
+  }
+  if (point.col < START_POSITION || point.col > cols_) {
+    throw std::invalid_argument{"Incorrect column value: " + std::to_string(point.col)};
+  }
 }
 
 

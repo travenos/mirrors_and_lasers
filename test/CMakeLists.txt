@@ -1,4 +1,3 @@
-enable_testing()
 find_package(GTest REQUIRED)
 
 set(TEST_NAME safe_checker_test)

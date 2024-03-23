@@ -58,6 +58,7 @@ public:
   SafeCheckResult check_safe() const;
 
 private:
+  void check_position_(const Point& point) const;
   void trace_the_ray_(const RayState& start_state,
                       RayState& end_state,
                       RaySegments& row_wise_segments,

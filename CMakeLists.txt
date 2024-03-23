@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 project(safe_laser LANGUAGES CXX)
 
@@ -22,5 +22,6 @@ add_executable(${EXECUTABLE_NAME} main.cpp)
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE ${LIBRARY_NAME})
 
 if(BUILD_TESTS)
+  enable_testing()
   add_subdirectory(test)
 endif()
