@@ -1,5 +1,5 @@
 #include "safe_checker.h"
-#include "ray_segment_intersection_finder.h"
+#include "intersection_search_helper.h"
 
 #include <algorithm>
 #include <stdexcept>
@@ -10,9 +10,9 @@ namespace mirrors_lasers {
 
 constexpr std::uint32_t START_POSITION{1U};
 
-static RaySegmentsIntersectionFinderMap ray_segments_to_map(const RaySegments& ray_segments)
+static IntersectinSearchHelperMap ray_segments_to_map(const RaySegments& ray_segments)
 {
-  RaySegmentsIntersectionFinderMap result;
+  IntersectinSearchHelperMap result;
   for (const auto& segment : ray_segments) {
     result[segment.first_coordinate]
         .add_segment(segment.second_coordinate_start, segment.second_coordinate_end);
@@ -39,12 +39,12 @@ SafeChecker::SafeChecker(std::uint32_t rows, std::uint32_t columns,
 
   // Fill the data
   for (const auto& left_to_up_mirror : left_to_up_mirrors) {
-    check_position_(left_to_up_mirror);
+    throw_if_out_of_bounds_(left_to_up_mirror);
     row_wise_mirrors_[left_to_up_mirror.row][left_to_up_mirror.col] = MirrorOrientation::LeftToUp;
     col_wise_mirrors_[left_to_up_mirror.col][left_to_up_mirror.row] = MirrorOrientation::LeftToUp;
   }
   for (const auto& left_to_down_mirror : left_to_down_mirrors) {
-    check_position_(left_to_down_mirror);
+    throw_if_out_of_bounds_(left_to_down_mirror);
     row_wise_mirrors_[left_to_down_mirror.row][left_to_down_mirror.col] = MirrorOrientation::LeftToDown;
     col_wise_mirrors_[left_to_down_mirror.col][left_to_down_mirror.row] = MirrorOrientation::LeftToDown;
   }
@@ -95,41 +95,26 @@ SafeCheckResult SafeChecker::check_safe() const
                                                                backward_row_wise_segments,
                                                                backward_col_wise_segments);
 
-  // Collect all intersections, which don't already contain a mirror
-  std::vector<Point> valid_intersections;
-  for (const auto& intersection: intersections) {
-    const auto mirror_row_iter = row_wise_mirrors_.find(intersection.row);
-    if (mirror_row_iter == row_wise_mirrors_.end()) {
-      valid_intersections.push_back(intersection);
-    } else {
-      const auto& mirror_row = mirror_row_iter->second;
-      const auto mirror_col_iter = mirror_row.find(intersection.col);
-      if (mirror_col_iter == mirror_row.end()) {
-        valid_intersections.push_back(intersection);
-      }
-    }
-  }
-
   // Can not be opened if no intersections
-  if (valid_intersections.empty()) {
+  if (intersections.empty()) {
     result.result_type = SafeCheckResultType::CanNotBeOpened;
     return result;
   }
 
   // Find the lexicographically smallest mirror position
   result.result_type = SafeCheckResultType::RequiresMirrorInsertion;
-  if (valid_intersections.size() < std::numeric_limits<std::uint32_t>::max()) {
-    result.positions = static_cast<std::uint32_t>(valid_intersections.size());
+  if (intersections.size() < std::numeric_limits<std::uint32_t>::max()) {
+    result.positions = static_cast<std::uint32_t>(intersections.size());
   } else {
     throw std::logic_error{"Internal logic error: intersections count is greater than maximum uint32"};
   }
-  auto points_comparer = [] (const Point& first, const Point& second) {
+  auto points_comparer = [] (const Point& first, const Point& second) -> bool {
     return first.row != second.row ? first.row < second.row : first.col < second.col;
   };
   const auto min_element_iter =
-      std::min_element(valid_intersections.begin(), valid_intersections.end(), points_comparer);
+      std::min_element(intersections.begin(), intersections.end(), points_comparer);
 
-  if (min_element_iter == valid_intersections.end()) {
+  if (min_element_iter == intersections.end()) {
     throw std::logic_error{"Failed to found min possible intersection"};
   }
   result.mirror_row = min_element_iter->row;
@@ -138,7 +123,7 @@ SafeCheckResult SafeChecker::check_safe() const
   return result;
 }
 
-void SafeChecker::check_position_(const Point& point) const
+void SafeChecker::throw_if_out_of_bounds_(const Point& point) const
 {
   if (point.row < START_POSITION || point.row > rows_) {
     throw std::invalid_argument{"Incorrect row value: " + std::to_string(point.row)};
@@ -147,7 +132,6 @@ void SafeChecker::check_position_(const Point& point) const
     throw std::invalid_argument{"Incorrect column value: " + std::to_string(point.col)};
   }
 }
-
 
 void SafeChecker::trace_the_ray_(const RayState& start_state,
                                  RayState& end_state,
@@ -262,14 +246,25 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
   end_state = current_state;
 }
 
+bool SafeChecker::has_mirror_(const Point& point) const
+{
+  const auto mirror_row_iter = row_wise_mirrors_.find(point.row);
+  if (mirror_row_iter == row_wise_mirrors_.end()) {
+    return false;
+  }
+  const auto& mirror_row = mirror_row_iter->second;
+  const auto mirror_col_iter = mirror_row.find(point.col);
+  return mirror_col_iter != mirror_row.end();
+}
+
 std::vector<Point> SafeChecker::find_intersections_(const RaySegments& forward_row_wise_segments,
                                                     const RaySegments& forward_col_wise_segments,
                                                     const RaySegments& backward_row_wise_segments,
                                                     const RaySegments& backward_col_wise_segments) const
 {
   std::vector<Point> intersections;
-  const RaySegmentsIntersectionFinderMap forward_row_wise_segments_map = ray_segments_to_map(forward_row_wise_segments);
-  const RaySegmentsIntersectionFinderMap forward_col_wise_segments_map = ray_segments_to_map(forward_col_wise_segments);
+  const IntersectinSearchHelperMap forward_row_wise_segments_map = ray_segments_to_map(forward_row_wise_segments);
+  const IntersectinSearchHelperMap forward_col_wise_segments_map = ray_segments_to_map(forward_col_wise_segments);
 
   for (const auto& segment : backward_row_wise_segments) {
     const std::uint32_t row = segment.first_coordinate;
@@ -277,8 +272,10 @@ std::vector<Point> SafeChecker::find_intersections_(const RaySegments& forward_r
     while (col_iter != forward_col_wise_segments_map.end() && col_iter->first <= segment.second_coordinate_end) {
       const std::uint32_t col = col_iter->first;
       if (col_iter->second.has_intersection(row)) {
-        Point intersection{row, col};
-        intersections.push_back(intersection);
+        const Point intersection{row, col};
+        if (!has_mirror_(intersection)) {
+          intersections.push_back(intersection);
+        }
       }
       ++col_iter;
     }
@@ -289,8 +286,10 @@ std::vector<Point> SafeChecker::find_intersections_(const RaySegments& forward_r
     while (row_iter != forward_row_wise_segments_map.end() && row_iter->first <= segment.second_coordinate_end) {
       const std::uint32_t row = row_iter->first;
       if (row_iter->second.has_intersection(col)) {
-        Point intersection{row, col};
-        intersections.push_back(intersection);
+        const Point intersection{row, col};
+        if (!has_mirror_(intersection)) {
+          intersections.push_back(intersection);
+        }
       }
       ++row_iter;
     }

@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(LIBRARY_NAME safe_laser_lib)
 
 add_library(${LIBRARY_NAME} OBJECT
-  ray_segment_intersection_finder.cpp
+  intersection_search_helper.cpp
   safe_checker.cpp
 )
 

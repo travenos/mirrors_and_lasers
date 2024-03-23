@@ -58,11 +58,14 @@ public:
   SafeCheckResult check_safe() const;
 
 private:
-  void check_position_(const Point& point) const;
+  void throw_if_out_of_bounds_(const Point& point) const;
+
   void trace_the_ray_(const RayState& start_state,
                       RayState& end_state,
                       RaySegments& row_wise_segments,
                       RaySegments& col_wise_segments) const;
+
+  bool has_mirror_(const Point& point) const;
 
   std::vector<Point> find_intersections_(const RaySegments& forward_row_wise_segments,
                                          const RaySegments& forward_col_wise_segments,
