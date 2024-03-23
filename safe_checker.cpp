@@ -7,6 +7,8 @@
 
 namespace mirrors_lasers {
 
+constexpr std::uint32_t START_POSITION{1U};
+
 static RaySegmentsIntersectionFinderMap ray_segments_to_map(const RaySegments& ray_segments)
 {
   RaySegmentsIntersectionFinderMap result;
@@ -44,7 +46,7 @@ SafeCheckResult SafeChecker::check_safe() const
 
   // Find ray segments of forward direction
   RayState forward_start_state;
-  forward_start_state.position = Point{1U, 1U};
+  forward_start_state.position = Point{START_POSITION, START_POSITION};
   forward_start_state.is_positive = true;
   forward_start_state.is_horizontal = true;
   RayState forward_end_state;
@@ -158,7 +160,7 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
       next_position.row = current_state.position.row;
       const auto row_iter = row_wise_mirrors_.find(current_state.position.row);
       if (row_iter == row_wise_mirrors_.end()) {
-        next_position.col = current_state.is_positive ? cols_ : 1U;
+        next_position.col = current_state.is_positive ? cols_ : START_POSITION;
         should_continue = false;
       } else {
         const auto& mirrors_line = row_iter->second;
@@ -176,7 +178,7 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
           }
         }
         if (closest_mirror_iter == mirrors_line.end()) {
-          next_position.col = current_state.is_positive ? cols_ : 1U;
+          next_position.col = current_state.is_positive ? cols_ : START_POSITION;
           should_continue = false;
         } else {
           next_position.col = closest_mirror_iter->first;
@@ -199,7 +201,7 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
       next_position.col = current_state.position.col;
       const auto col_iter = col_wise_mirrors_.find(current_state.position.col);
       if (col_iter == col_wise_mirrors_.end()) {
-        next_position.row = current_state.is_positive ? rows_ : 1U;
+        next_position.row = current_state.is_positive ? rows_ : START_POSITION;
         should_continue = false;
       } else {
         const auto& mirrors_line = col_iter->second;
@@ -217,7 +219,7 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
           }
         }
         if (closest_mirror_iter == mirrors_line.end()) {
-          next_position.row = current_state.is_positive ? rows_ : 1U;
+          next_position.row = current_state.is_positive ? rows_ : START_POSITION;
           should_continue = false;
         } else {
           next_position.row = closest_mirror_iter->first;

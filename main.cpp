@@ -19,6 +19,21 @@ namespace {
 constexpr std::int32_t MAX_SIDE{1000000};
 constexpr std::int32_t MAX_MIRRORS{200000};
 
+void print_info()
+{
+  std::cout << "First enter number of rows, columns, / mirrors and \\ mirrors (r c m n)" << std::endl;
+  std::cout << "Then enter m coordinates of / mirrors in a column:" << std::endl;
+  std::cout << "ri ci" << std::endl << "rj cj" << std::endl;
+  std::cout << "Then enter n coordinates of \\ mirrors in a column:" << std::endl;
+  std::cout << "ri ci" << std::endl << "rj cj" << std::endl;
+  std::cout << "Meaning of the result:" << std::endl;
+  std::cout << "0 if the safe opens without inserting a mirror;" << std::endl;
+  std::cout << "-1 if the safe cannot be opened with or without inserting a mirror;" << std::endl;
+  std::cout << "k r c if the safe does not open without inserting a mirror, "
+               "there are exactly k positions where inserting a mirror opens the safe, "
+               "and (r, c) is the lexicographically smallest such row, column position." << std::endl;
+}
+
 std::vector<mirrors_lasers::Point> input_mirrors(std::int32_t count, std::int32_t r, std::int32_t c)
 {
   std::vector<mirrors_lasers::Point> mirrors;
@@ -43,6 +58,8 @@ std::vector<mirrors_lasers::Point> input_mirrors(std::int32_t count, std::int32_
 
 int main()
 {
+  print_info();
+
   std::int32_t r{};
   std::int32_t c{};
   std::int32_t m{};
