@@ -306,7 +306,7 @@ TEST(SafeCheckerTest, OneColumnOpensWithoutInsertion)
   ASSERT_EQ(check_result.result_type, mirrors_lasers::SafeCheckResultType::OpensWithoutInserting);
 }
 
-TEST(SafeCheckerTest, LongRayTracing)
+TEST(SafeCheckerTest, LongBeamTracing)
 {
   constexpr std::uint32_t R{6U};
   constexpr std::uint32_t C{7U};
@@ -322,7 +322,7 @@ TEST(SafeCheckerTest, LongRayTracing)
   EXPECT_EQ(check_result.mirror_col, 2U);
 }
 
-TEST(SafeCheckerTest, LongRayTracingNearSides)
+TEST(SafeCheckerTest, LongBeamTracingNearSides)
 {
   constexpr std::uint32_t R{6U};
   constexpr std::uint32_t C{7U};
@@ -338,7 +338,7 @@ TEST(SafeCheckerTest, LongRayTracingNearSides)
   EXPECT_EQ(check_result.mirror_col, 1U);
 }
 
-TEST(SafeCheckerTest, LongRayTracingMultipleIntersections)
+TEST(SafeCheckerTest, LongBeamTracingMultipleIntersections)
 {
   constexpr std::uint32_t R{6U};
   constexpr std::uint32_t C{6U};

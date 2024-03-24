@@ -2,18 +2,19 @@
 #include "intersection_search_helper.h"
 
 #include <algorithm>
+#include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <string>
-#include <limits>
 
 namespace mirrors_lasers {
 
 constexpr std::uint32_t START_POSITION{1U};
 
-static IntersectinSearchHelperMap ray_segments_to_map(const RaySegments& ray_segments)
+static IntersectionSearchHelperMap beam_segments_to_map(const BeamSegments& beam_segments)
 {
-  IntersectinSearchHelperMap result;
-  for (const auto& segment : ray_segments) {
+  IntersectionSearchHelperMap result;
+  for (const auto& segment : beam_segments) {
     result[segment.first_coordinate]
         .add_segment(segment.second_coordinate_start, segment.second_coordinate_end);
   }
@@ -54,18 +55,18 @@ SafeCheckResult SafeChecker::check_safe() const
 {
   SafeCheckResult result{};
 
-  // Find ray segments of forward direction
-  RayState forward_start_state;
+  // Find beam segments of direct direction
+  BeamState forward_start_state{};
   forward_start_state.position = Point{START_POSITION, START_POSITION};
   forward_start_state.is_positive = true;
   forward_start_state.is_horizontal = true;
-  RayState forward_end_state;
-  RaySegments forward_row_wise_segments;
-  RaySegments forward_col_wise_segments;
-  trace_the_ray_(forward_start_state,
-                 forward_end_state,
-                 forward_row_wise_segments,
-                 forward_col_wise_segments);
+  BeamState forward_end_state{};
+  BeamSegments forward_horizontal_segments{};
+  BeamSegments forward_vertical_segments{};
+  trace_the_beam_(forward_start_state,
+                  forward_end_state,
+                  forward_horizontal_segments,
+                  forward_vertical_segments);
 
   // Check if the safe can be opened without any mirror insertion
   if (forward_end_state.position.row == rows_ &&
@@ -76,24 +77,24 @@ SafeCheckResult SafeChecker::check_safe() const
     return result;
   }
 
-  // Find ray segments of backward direction
-  RayState backward_start_state;
+  // Find beam segments of reverse direction
+  BeamState backward_start_state;
   backward_start_state.position = Point{rows_, cols_};
   backward_start_state.is_positive = false;
   backward_start_state.is_horizontal = true;
-  RayState backward_end_state;
-  RaySegments backward_row_wise_segments;
-  RaySegments backward_col_wise_segments;
-  trace_the_ray_(backward_start_state,
-                 backward_end_state,
-                 backward_row_wise_segments,
-                 backward_col_wise_segments);
+  BeamState backward_end_state{};
+  BeamSegments backward_horizontal_segments{};
+  BeamSegments backward_vertical_segments{};
+  trace_the_beam_(backward_start_state,
+                  backward_end_state,
+                  backward_horizontal_segments,
+                  backward_vertical_segments);
 
   // Find intersections
-  const std::vector<Point> intersections = find_intersections_(forward_row_wise_segments,
-                                                               forward_col_wise_segments,
-                                                               backward_row_wise_segments,
-                                                               backward_col_wise_segments);
+  const std::vector<Point> intersections = find_intersections_(forward_horizontal_segments,
+                                                               forward_vertical_segments,
+                                                               backward_horizontal_segments,
+                                                               backward_vertical_segments);
 
   // Can not be opened if no intersections
   if (intersections.empty()) {
@@ -133,15 +134,15 @@ void SafeChecker::throw_if_out_of_bounds_(const Point& point) const
   }
 }
 
-void SafeChecker::trace_the_ray_(const RayState& start_state,
-                                 RayState& end_state,
-                                 RaySegments& row_wise_segments,
-                                 RaySegments& col_wise_segments) const
+void SafeChecker::trace_the_beam_(const BeamState& start_state,
+                                  BeamState& end_state,
+                                  BeamSegments& horizontal_segments,
+                                  BeamSegments& vertical_segments) const
 {
-  row_wise_segments.clear();
-  col_wise_segments.clear();
+  horizontal_segments.clear();
+  vertical_segments.clear();
 
-  RayState current_state = start_state;
+  BeamState current_state = start_state;
 
   // Check the initial position
   const auto first_row_iter = row_wise_mirrors_.find(current_state.position.row);
@@ -157,10 +158,10 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
     }
   }
 
-  bool should_continue = true;
+  bool should_continue{true};
   while(should_continue) {
     if (current_state.is_horizontal) {
-      Point next_position;
+      Point next_position{};
       next_position.row = current_state.position.row;
       const auto row_iter = row_wise_mirrors_.find(current_state.position.row);
       if (row_iter == row_wise_mirrors_.end()) {
@@ -196,12 +197,12 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
       }
       // Add a segment
       const auto min_max_cols_pair = std::minmax(current_state.position.col, next_position.col);
-      RaySegment segment{current_state.position.row, min_max_cols_pair.first, min_max_cols_pair.second};
-      row_wise_segments.push_back(segment);
+      BeamSegment segment{current_state.position.row, min_max_cols_pair.first, min_max_cols_pair.second};
+      horizontal_segments.push_back(segment);
       // Go to the next position
       current_state.position = next_position;
     } else {
-      Point next_position;
+      Point next_position{};
       next_position.col = current_state.position.col;
       const auto col_iter = col_wise_mirrors_.find(current_state.position.col);
       if (col_iter == col_wise_mirrors_.end()) {
@@ -237,8 +238,8 @@ void SafeChecker::trace_the_ray_(const RayState& start_state,
       }
       // Add a segment
       const auto min_max_rows_pair = std::minmax(current_state.position.row, next_position.row);
-      RaySegment segment{current_state.position.col, min_max_rows_pair.first, min_max_rows_pair.second};
-      col_wise_segments.push_back(segment);
+      BeamSegment segment{current_state.position.col, min_max_rows_pair.first, min_max_rows_pair.second};
+      vertical_segments.push_back(segment);
       // Go to the next position
       current_state.position = next_position;
     }
@@ -257,19 +258,19 @@ bool SafeChecker::has_mirror_(const Point& point) const
   return mirror_col_iter != mirror_row.end();
 }
 
-std::vector<Point> SafeChecker::find_intersections_(const RaySegments& forward_row_wise_segments,
-                                                    const RaySegments& forward_col_wise_segments,
-                                                    const RaySegments& backward_row_wise_segments,
-                                                    const RaySegments& backward_col_wise_segments) const
+std::vector<Point> SafeChecker::find_intersections_(const BeamSegments& forward_horizontal_segments,
+                                                    const BeamSegments& forward_vertical_segments,
+                                                    const BeamSegments& backward_horizontal_segments,
+                                                    const BeamSegments& backward_vertical_segments) const
 {
   std::vector<Point> intersections;
-  const IntersectinSearchHelperMap forward_row_wise_segments_map = ray_segments_to_map(forward_row_wise_segments);
-  const IntersectinSearchHelperMap forward_col_wise_segments_map = ray_segments_to_map(forward_col_wise_segments);
+  const IntersectionSearchHelperMap forward_horizontal_segments_map = beam_segments_to_map(forward_horizontal_segments);
+  const IntersectionSearchHelperMap forward_vertical_segments_map = beam_segments_to_map(forward_vertical_segments);
 
-  for (const auto& segment : backward_row_wise_segments) {
+  for (const auto& segment : backward_horizontal_segments) {
     const std::uint32_t row = segment.first_coordinate;
-    auto col_iter = forward_col_wise_segments_map.lower_bound(segment.second_coordinate_start);
-    while (col_iter != forward_col_wise_segments_map.end() && col_iter->first <= segment.second_coordinate_end) {
+    auto col_iter = forward_vertical_segments_map.lower_bound(segment.second_coordinate_start);
+    while (col_iter != forward_vertical_segments_map.end() && col_iter->first <= segment.second_coordinate_end) {
       const std::uint32_t col = col_iter->first;
       if (col_iter->second.has_intersection(row)) {
         const Point intersection{row, col};
@@ -280,10 +281,10 @@ std::vector<Point> SafeChecker::find_intersections_(const RaySegments& forward_r
       ++col_iter;
     }
   }
-  for (const auto& segment : backward_col_wise_segments) {
+  for (const auto& segment : backward_vertical_segments) {
     const std::uint32_t col = segment.first_coordinate;
-    auto row_iter = forward_row_wise_segments_map.lower_bound(segment.second_coordinate_start);
-    while (row_iter != forward_row_wise_segments_map.end() && row_iter->first <= segment.second_coordinate_end) {
+    auto row_iter = forward_horizontal_segments_map.lower_bound(segment.second_coordinate_start);
+    while (row_iter != forward_horizontal_segments_map.end() && row_iter->first <= segment.second_coordinate_end) {
       const std::uint32_t row = row_iter->first;
       if (row_iter->second.has_intersection(col)) {
         const Point intersection{row, col};

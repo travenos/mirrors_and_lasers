@@ -90,8 +90,8 @@ mirrors.
 
 #### 1. Data structure for storing information about mirrors
 An ordered dictionary (`std::map`), where the key is the mirror's position and the value is the type of mirror, is used
-to store positions in each row and column. In such a dictionary, searching for the nearest mirror has logarithmic
-complexity, but its construction has O(log(n)) complexity.  
+to store positions of mirrors in each row and column. In such a dictionary, searching for the nearest mirror has
+logarithmic complexity, but its construction has O(log(n)) complexity.  
 Rows with mirrors are combined into a dictionary based on a hash table (`std::unordered_map`), where the keys are the
 numbers of rows containing mirrors, and the values are dictionaries with the positions of mirrors in the row.
 In such a dictionary, access to the required row has constant complexity.  
@@ -117,9 +117,9 @@ To simplify the complexity of the search, the trajectory segments from the laser
 based on ordered dictionaries (`std::map`).
 Two objects with the same structure are created - for horizontal and vertical segments.
 Each row or column is placed in an object `IntersectionSearchHelper`, which is a wrapper over `std::map`.
-In `std::map`, the ends of the trajectory segments in a given row are used as keys, and their beginnings as values.
-As a result of using `std::map`, `IntersectionSearchHelper` can determine with logarithmic complexity whether there is
-an intersection at a certain point of a row/column.
+In `std::map`, the ends of the trajectory segments in a given row/column are used as keys, and their beginnings as
+values. As a result of using `std::map`, `IntersectionSearchHelper` can determine with logarithmic complexity whether
+there is an intersection at a certain point of a row/column.
 `IntersectionSearchHelper` objects are also placed in `std::map` dictionaries, where the key is the number of the row or
 column, and the values are `IntersectionSearchHelper` objects for that row/column.  
 When searching for intersections, all rows or columns from this dictionary are sequentially checked, starting from the

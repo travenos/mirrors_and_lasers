@@ -20,4 +20,4 @@ bool IntersectionSearchHelper::has_intersection(std::uint32_t orthogonal_line_po
   return segment_begin <= orthogonal_line_position;
 }
 
-}  // mirrors_lasers
+}  // namespace mirrors_lasers
