@@ -104,9 +104,9 @@ SafeCheckResult SafeChecker::check_safe() const
 
   // Find the lexicographically smallest mirror position
   result.result_type = SafeCheckResultType::RequiresMirrorInsertion;
-  if (intersections.size() < std::numeric_limits<std::uint32_t>::max()) {
+  if (intersections.size() <= std::numeric_limits<std::uint32_t>::max()) {
     result.positions = static_cast<std::uint32_t>(intersections.size());
-  } else {
+  } else {  // Should not happen
     throw std::logic_error{"Internal logic error: intersections count is greater than maximum uint32"};
   }
   auto points_comparer = [] (const Point& first, const Point& second) -> bool {
@@ -114,10 +114,6 @@ SafeCheckResult SafeChecker::check_safe() const
   };
   const auto min_element_iter =
       std::min_element(intersections.begin(), intersections.end(), points_comparer);
-
-  if (min_element_iter == intersections.end()) {
-    throw std::logic_error{"Failed to found min possible intersection"};
-  }
   result.mirror_row = min_element_iter->row;
   result.mirror_col = min_element_iter->col;
 

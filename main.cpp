@@ -3,16 +3,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <limits>
 #include <vector>
 #include <stdexcept>
-
-static_assert (std::numeric_limits<std::uint32_t>::max() > 1000000U,
-               "std::uint32_t size is not sufficient");
-static_assert (std::numeric_limits<std::int32_t>::max() > 1000000U,
-               "std::int32_t size is not sufficient");
-static_assert (std::numeric_limits<std::int32_t>::max() < std::numeric_limits<std::size_t>::max(),
-               "max value of std::int32_t should be lower than max_value of std::size_t");
 
 namespace {
 
